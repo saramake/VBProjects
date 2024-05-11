@@ -2,6 +2,7 @@
 Imports Newtonsoft.Json
 Imports System.IO
 Imports System.Text.Json.Nodes
+Imports System.Text.RegularExpressions
 
 Public Class Setting
 
@@ -87,6 +88,78 @@ Public Class Setting
     End Sub
 
 
+    Private Function SearchFolder(baseFolderwithEnv As String, SearchFileNamewithEnv As String) As String()
+        ' 環境変数WORKFOLDERを取得
+        Dim baseFolder As String = Environment.GetEnvironmentVariable(baseFolderwithEnv)
+        Dim searchFileName As String = Environment.GetEnvironmentVariable(SearchFileNamewithEnv)
+        Try
+            If baseFolder Is Nothing Then
+                Console.WriteLine("%WORKFOLDER% 環境変数が見つかりません。")
+                Return Nothing
+            End If
 
+            ' ディレクトリが存在するか確認
+            If Not Directory.Exists(baseFolder) Then
+                Console.WriteLine("指定されたパスが存在しません: " & baseFolder)
+                Return Nothing
+            End If
 
+            ' "123_*"に一致するすべてのファイルを検索（サブディレクトリも含む）
+            Dim files As String() = Directory.GetFiles(baseFolder, searchFileName, SearchOption.AllDirectories)
+            For Each file As String In files
+                Console.WriteLine("見つかったファイル: " & file)
+            Next
+
+            ' 一致するファイルがない場合
+            If files.Length = 0 Then
+                Console.WriteLine("一致するファイルが見つかりませんでした。")
+            End If
+            Return files
+        Catch e As Exception
+            Console.WriteLine("catch a exception" & e.ToString)
+            Return Nothing
+        End Try
+
+    End Function
+
+    Function CheckPatternMatch(ByVal pattern As String, ByVal filePath As String) As Boolean
+        ' ファイルの内容を読み込む
+        Dim fileContent As String = IO.File.ReadAllText(filePath)
+
+        ' Regexオブジェクトを作成
+        Dim regex As New Regex(pattern)
+
+        ' ファイル内容で正規表現と一致する対象をすべて検索
+        Dim matches As MatchCollection = regex.Matches(fileContent)
+
+        ' マッチが見つかったかどうかを返す
+        Return matches.Count > 0
+    End Function
+
+    ' 指定されたフォルダ内のファイルを検索し、正規表現パターンにマッチする文字列をリストとして返すFunction
+    Function ProcessFiles(ByVal folder As String, ByVal file As String, ByVal regexPattern As String) As List(Of String)
+        Dim matchedResults As New List(Of String)()
+
+        ' 指定されたフォルダー以下のすべてのファイルを取得
+        Dim files As String() = Directory.GetFiles(folder, file, SearchOption.AllDirectories)
+
+        ' 各ファイルに対して処理を行う
+        For Each filePath As String In files
+            ' ファイルの内容を読み込む
+            Dim fileContent As String = IO.File.ReadAllText(filePath)
+
+            ' Regexオブジェクトを作成
+            Dim regex As New Regex(regexPattern)
+
+            ' ファイル内容で正規表現と一致する対象をすべて検索
+            Dim matches As MatchCollection = regex.Matches(fileContent)
+
+            ' 一致するすべてのマッチをリストに追加
+            For Each match As Match In matches
+                matchedResults.Add(match.Value)
+            Next
+        Next
+
+        Return matchedResults
+    End Function
 End Class
